@@ -42,7 +42,7 @@ def train(episodes=10000, eval_frequency=100):
     rewards_history = []
     win_rates = {"easy": [], "medium": [], "hard": []}
 
-    random_move_prob = 0.8
+    random_move_prob = 1.0
 
     reward_window = []
     window_size = 10
@@ -130,7 +130,10 @@ def train(episodes=10000, eval_frequency=100):
                 f"Avg Reward: {avg_reward:.2f} | Captures: {episode_captures} | ε: {rl_agent.epsilon:.3f} | Random Move Prob: {random_move_prob:.3f}"
             )
 
-        random_move_prob = max(0.1, random_move_prob * 0.998)
+        random_move_prob = max(0.1, random_move_prob * 0.999)
+        rl_agent.epsilon = max(
+            0.01, rl_agent.epsilon * rl_agent.epsilon_decay
+        )
 
         if (episode + 1) % eval_frequency == 0:
             print(f"\nEpisode {episode+1}")
