@@ -13,4 +13,6 @@ dependencies = [
   "pygame",
   "pre-commit",
   "torch",
+  "tqdm",
+  "matplotlib",
 ]
