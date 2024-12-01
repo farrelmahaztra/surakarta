@@ -79,6 +79,24 @@ class SurakartaEnv(gym.Env):
             self._render_frame()
 
         return self._get_obs(), self._get_info()
+    
+    def get_intermediate_reward(self, action):
+        _, _, to_row, to_col = action
+
+        reward = 0
+
+        if self.board[to_row, to_col] != 0: 
+            reward += 0.5
+
+        if 2 <= to_row <= 3 and 2 <= to_col <= 3:
+            reward += 0.1
+
+        arc_positions = {(0, 1), (0, 4), (1, 0), (1, 5), (4, 0), (4, 5), (5, 1), (5, 4)}
+
+        if (to_row, to_col) in arc_positions:
+            reward += 0.1
+
+        return reward
 
     def step(self, action) -> Tuple[Dict, float, bool, bool, Dict]:
         from_row, from_col, to_row, to_col = action
@@ -86,10 +104,15 @@ class SurakartaEnv(gym.Env):
         if not self._is_valid_move(from_row, from_col, to_row, to_col):
             return self._get_obs(), -1.0, False, False, self._get_info()
 
+        reward = self.get_intermediate_reward(action)
+
         self._make_move(from_row, from_col, to_row, to_col)
 
-        terminated = self._check_win() is not None
-        reward = 1.0 if terminated else 0.0
+        winner = self._check_win()
+        terminated = winner is not None
+
+        if terminated:
+            reward = 3.0 if winner == self.current_player else -3.0
 
         self.current_player = (
             Player.WHITE if self.current_player == Player.BLACK else Player.BLACK
