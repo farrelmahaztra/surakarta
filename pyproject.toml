@@ -15,4 +15,7 @@ dependencies = [
   "torch",
   "tqdm",
   "matplotlib",
+  "django",
+  "djangorestframework",
+  "django-cors-headers",
 ]
