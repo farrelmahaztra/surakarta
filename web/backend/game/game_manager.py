@@ -18,9 +18,9 @@ class GameManager:
         observation, _ = env.reset()
 
         if agent_type == "rule":
-            agent = MinimaxSurakartaAgent()
+            agent = MinimaxSurakartaAgent(max_depth=1)
         elif agent_type == "rl":
-            agent = SurakartaRLAgent()
+            agent = SurakartaRLAgent(env=env)
 
         cls._games[game_id] = {"env": env, "agent": agent}
         return observation

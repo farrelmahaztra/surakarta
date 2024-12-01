@@ -28,8 +28,8 @@ const Game = () => {
 
         setLoading(true);
         try {
-            const { observation } = await gameApi.makeMove(move, gameId);
-            setGameState(observation);
+            const { observation, info } = await gameApi.makeMove(move, gameId);
+            setGameState({ ...observation, score: info?.white_pieces !== undefined ? 12 - info.white_pieces : 0 });
         } catch (error) {
             console.error('Error making move:', error);
         } finally {

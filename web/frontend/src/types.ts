@@ -22,4 +22,5 @@ export interface GameState {
     board: Board;
     current_player: Player;
     game_over: boolean;
+    score?: number;
 }

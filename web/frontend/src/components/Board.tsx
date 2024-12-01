@@ -48,7 +48,7 @@ export default function Board({ gameState, onMove, disabled }: BoardProps) {
                     <div
                         className={`
                             w-12 h-12 rounded-full transition-transform
-                            ${value === 1 ? 'bg-white' : 'bg-black'}
+                            ${value === 1 ? 'bg-black' : 'bg-white'}
                             ${isSelected ? 'scale-110 ring-4 ring-yellow-400' : ''}
                             ${!disabled && 'hover:ring-2 hover:ring-yellow-400'}
                         `}
@@ -79,11 +79,13 @@ export default function Board({ gameState, onMove, disabled }: BoardProps) {
                 ))}
             </div>
             <div className="text-center">
-                {gameState.game_over && (
+                {gameState.game_over ? (
                     <div className="text-2xl font-bold">
                         Game Over! {gameState.current_player === 0 ? "You won!" : "AI won!"}
                     </div>
-                )}
+                ) : <div className="text-2xl font-bold">
+                    {'Score: ' + (gameState.score ?? 0)}
+                </div>}
             </div>
         </div>
     );
