@@ -4,11 +4,17 @@ from engine.surakarta import (
 from agents.dqn import SurakartaRLAgent
 from agents.minimax import MinimaxSurakartaAgent
 from typing import Dict, Union
+import torch
+import os
 
 AgentType = Union[MinimaxSurakartaAgent, SurakartaRLAgent]
 GameState = Dict[str, Union[SurakartaEnv, AgentType]]
 
-
+current_dir = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(
+    current_dir,
+    "../../../training_runs/random/surakarta_agent_vs_random_episode_500.pth",
+)
 class GameManager:
     _games: Dict[str, GameState] = {}
 
@@ -21,6 +27,9 @@ class GameManager:
             agent = MinimaxSurakartaAgent(max_depth=1)
         elif agent_type == "rl":
             agent = SurakartaRLAgent(env=env)
+            checkpoint = torch.load(model_path, map_location=agent.device)
+            agent.q_net.load_state_dict(checkpoint["q_net_state_dict"])
+            agent.target_net.load_state_dict(checkpoint["q_net_state_dict"])
 
         cls._games[game_id] = {"env": env, "agent": agent}
         return observation

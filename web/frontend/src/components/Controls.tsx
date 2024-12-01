@@ -8,16 +8,16 @@ interface ControlsProps {
 export default function Controls({ onStartGame, disabled }: ControlsProps) {
     return (
         <div className="flex flex-col items-center gap-6">
-            <h1 className="text-3xl font-bold">Surakarta Game</h1>
+            <h1 className="text-3xl font-bold">Surakarta</h1>
             <div className="flex gap-4">
                 <button
                     onClick={() => onStartGame(AgentType.Rule)}
                     disabled={disabled}
                     className="
                         px-6 py-3 
-                        bg-blue-500 text-white 
+                        bg-green-900 text-white 
                         rounded-lg shadow 
-                        hover:bg-blue-600 
+                        hover:bg-green-800 
                         disabled:opacity-50
                         disabled:cursor-not-allowed
                         transition-colors
@@ -31,9 +31,9 @@ export default function Controls({ onStartGame, disabled }: ControlsProps) {
                     disabled={disabled}
                     className="
                         px-6 py-3 
-                        bg-green-500 text-white 
+                        bg-green-900 text-white 
                         rounded-lg shadow 
-                        hover:bg-green-600 
+                        hover:bg-green-800  
                         disabled:opacity-50
                         disabled:cursor-not-allowed
                         transition-colors
