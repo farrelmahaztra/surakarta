@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
 from collections import deque
@@ -12,29 +11,27 @@ class SurakartaNet(nn.Module):
         super().__init__()
         self.board_size = board_size
 
-        self.features = nn.Sequential(
-            nn.Conv2d(2, 64, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(128, 128, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
+        self.conv1 = nn.Conv2d(2, 32, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(32)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(64)
 
-        self.q_net = nn.Sequential(
-            nn.Linear(128 * board_size * board_size, 512),
-            nn.ReLU(),
-            nn.Linear(512, board_size * board_size * board_size * board_size),
-        )
+        self.flat_size = 64 * board_size * board_size
+
+        self.fc1 = nn.Linear(self.flat_size, 256)
+        self.ln1 = nn.LayerNorm(256)
+        self.fc2 = nn.Linear(256, board_size * board_size * board_size * board_size)
 
     def forward(self, x):
-        features = self.features(x)
-        return self.q_net(features)
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = x.view(-1, self.flat_size)
+        x = F.relu(self.ln1(self.fc1(x)))
+        return self.fc2(x)
 
 
 class SurakartaRLAgent:
-    def __init__(self, env, device="mps"):
+    def __init__(self, env, device="cpu"):
         self.env = env
         self.device = device
 
@@ -42,35 +39,31 @@ class SurakartaRLAgent:
         self.target_net = SurakartaNet().to(device)
         self.target_net.load_state_dict(self.q_net.state_dict())
 
-        self.optimizer = optim.Adam(self.q_net.parameters(), lr=1e-4)
-        self.memory = deque(maxlen=100000)
-        self.batch_size = 32
-        self.gamma = 0.99
+        self.batch_size = 128  
+        self.gamma = 0.95 
+        self.optimizer = torch.optim.AdamW(
+            self.q_net.parameters(),
+            lr=3e-4,
+            weight_decay=1e-4, 
+        )
 
-        self.exploration_fraction = 0.1
-        self.exploration_initial_eps = 1.0
-        self.exploration_final_eps = 0.05
-        self.max_steps = 10000 
-        self.exploration_schedule = lambda steps_done: self.exploration_final_eps + (
-            self.exploration_initial_eps - self.exploration_final_eps
-        ) * max(0, 1 - steps_done / (self.max_steps * self.exploration_fraction))
+        self.memory = deque(maxlen=50000)
 
+        self.eps_start = 1.0
+        self.eps_end = 0.05
+        self.eps_decay = 20000 
         self.steps_done = 0
+
         self.target_update_interval = 1000
-        self.tau = 0.005  
-        self.max_grad_norm = 10.0
+        self.tau = 0.005 
 
-    def get_state_tensor(self, state):
-        board = state["board"]
-
-        black_channel = (board == 1).astype(np.float32)
-        white_channel = (board == 2).astype(np.float32)
-
-        state_tensor = np.stack([black_channel, white_channel])
-        return torch.FloatTensor(state_tensor).unsqueeze(0).to(self.device)
+    def get_epsilon(self):
+        return self.eps_end + (self.eps_start - self.eps_end) * np.exp(
+            -self.steps_done / self.eps_decay
+        )
 
     def get_action(self, state, training=True):
-        epsilon = self.exploration_schedule(self.steps_done) if training else 0.0
+        epsilon = self.get_epsilon() if training else 0.05
 
         if training and random.random() < epsilon:
             valid_actions = []
@@ -83,46 +76,17 @@ class SurakartaRLAgent:
                         )
             return random.choice(valid_actions) if valid_actions else None
 
-        state_tensor = self.get_state_tensor(state)
         with torch.no_grad():
+            state_tensor = self.get_state_tensor(state)
             q_values = self.q_net(state_tensor)
+            valid_mask = self.get_valid_actions_mask()
+            q_values = q_values * valid_mask
 
-        valid_actions_mask = self.get_valid_actions_mask()
-        q_values = q_values * valid_actions_mask
+            if q_values.sum() == 0:
+                return None
 
-        if q_values.sum() == 0:
-            return None
-
-        action_idx = torch.argmax(q_values).item()
-        return self.idx_to_action(action_idx)
-
-    def train(self, num_episodes=1000):
-        for episode in range(num_episodes):
-            state, _ = self.env.reset()
-            total_reward = 0
-            done = False
-
-            while not done:
-                action = self.get_action(state)
-                if action is None:
-                    break
-
-                next_state, reward, terminated, truncated, _ = self.env.step(action)
-                done = terminated or truncated
-
-                self.memory.append((state, action, reward, next_state, done))
-                state = next_state
-                total_reward += reward
-
-                if len(self.memory) >= self.batch_size:
-                    self.update_model()
-
-            self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
-
-            if episode % 100 == 0:
-                print(
-                    f"Episode {episode}, Total Reward: {total_reward}, Epsilon: {self.epsilon:.2f}"
-                )
+            action_idx = q_values.max(1)[1].item()
+            return self.idx_to_action(action_idx)
 
     def update_model(self):
         if len(self.memory) < self.batch_size:
@@ -145,12 +109,10 @@ class SurakartaRLAgent:
             dtype=torch.float32,
         ).unsqueeze(1)
 
-        current_q_values = self.q_net(state_batch)
-        current_q_values = current_q_values.gather(1, action_batch)
+        current_q_values = self.q_net(state_batch).gather(1, action_batch)
 
         with torch.no_grad():
-            next_q_values = self.target_net(next_state_batch)
-            next_q_values = next_q_values.max(1, keepdim=True)[0]
+            next_q_values = self.target_net(next_state_batch).max(1, keepdim=True)[0]
             target_q_values = (
                 reward_batch + (1 - done_batch) * self.gamma * next_q_values
             )
@@ -159,25 +121,35 @@ class SurakartaRLAgent:
 
         self.optimizer.zero_grad()
         loss.backward()
-
-        torch.nn.utils.clip_grad_norm_(self.q_net.parameters(), self.max_grad_norm)
+        torch.nn.utils.clip_grad_norm_(self.q_net.parameters(), 10) 
         self.optimizer.step()
 
-        for target_param, param in zip(
-            self.target_net.parameters(), self.q_net.parameters()
-        ):
-            target_param.data.copy_(
-                self.tau * param.data + (1 - self.tau) * target_param.data
-            )
+        if self.steps_done % self.target_update_interval == 0:
+            for target_param, param in zip(
+                self.target_net.parameters(), self.q_net.parameters()
+            ):
+                target_param.data.copy_(
+                    target_param.data * (1.0 - self.tau) + param.data * self.tau
+                )
 
         self.steps_done += 1
 
+        return loss.item()
+
+    def get_state_tensor(self, state):
+        board = state["board"]
+        black_channel = (board == 1).astype(np.float32)
+        white_channel = (board == 2).astype(np.float32)
+        state_tensor = np.stack([black_channel, white_channel])
+        return torch.FloatTensor(state_tensor).unsqueeze(0).to(self.device)
+
     def action_to_idx(self, action):
         from_row, from_col, to_row, to_col = action
+        board_size = self.env.board_size
         return (
-            from_row * self.env.board_size * self.env.board_size * self.env.board_size
-            + from_col * self.env.board_size * self.env.board_size
-            + to_row * self.env.board_size
+            from_row * board_size * board_size * board_size
+            + from_col * board_size * board_size
+            + to_row * board_size
             + to_col
         )
 
