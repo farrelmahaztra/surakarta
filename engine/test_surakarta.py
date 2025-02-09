@@ -88,6 +88,34 @@ class TestSurakarta(unittest.TestCase):
         
         winner = self.env._check_win()
         self.assertEqual(winner, Player.WHITE)
+        
+    def test_caching(self):
+        self.env.board = np.zeros((6, 6), dtype=np.int8)
+        self.env.board[1, 1] = Player.BLACK.value
+        self.env.board[4, 4] = Player.WHITE.value
+        self.env.current_player = Player.BLACK
+        self.env.move_cache = {}
+        self.env.capture_cache = {}
+        
+        pos = (1, 1)
+        moves = self.env._get_valid_moves(pos)
+        captures = self.env._get_capture_moves(pos)
+        
+        board_tuple = tuple(map(tuple, self.env.board))
+        move_cache_key = (pos, board_tuple, Player.BLACK.value)
+        capture_cache_key = (pos, board_tuple, Player.BLACK.value)
+        
+        self.assertIn(move_cache_key, self.env.move_cache)
+        self.assertIn(capture_cache_key, self.env.capture_cache)
+        
+        self.assertEqual(self.env.move_cache[move_cache_key], moves)
+        self.assertEqual(self.env.capture_cache[capture_cache_key], captures)
+        
+        moves2 = self.env._get_valid_moves(pos)
+        captures2 = self.env._get_capture_moves(pos)
+        
+        self.assertEqual(moves, moves2)
+        self.assertEqual(captures, captures2)
 
 
 if __name__ == "__main__":
