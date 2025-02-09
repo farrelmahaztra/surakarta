@@ -6,7 +6,6 @@ import math
 from enum import Enum
 from typing import Optional, Dict, Tuple, List
 
-
 class Player(Enum):
     NONE = 0
     BLACK = 1
@@ -25,6 +24,8 @@ class SurakartaEnv(gym.Env):
         self.piece_radius = self.cell_size // 3
         self.board_offset = 200
 
+        self.move_cache = {}
+        self.capture_cache = {}
         self.colors = {
             "BACKGROUND": (1, 50, 32),
             "LINES": (255, 255, 255),
@@ -162,10 +163,18 @@ class SurakartaEnv(gym.Env):
 
     def _get_valid_moves(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
         row, col = pos
-        moves: List[Tuple[int, int]] = []
 
         if self.board is None:
-            return moves
+            return []
+
+        board_tuple = tuple(map(tuple, self.board))
+        current_player_value = self.current_player.value if self.current_player else 0
+        cache_key = (pos, board_tuple, current_player_value)
+
+        if cache_key in self.move_cache:
+            return self.move_cache[cache_key]
+
+        moves: List[Tuple[int, int]] = []
 
         for dr in [-1, 0, 1]:
             for dc in [-1, 0, 1]:
@@ -178,12 +187,21 @@ class SurakartaEnv(gym.Env):
                     moves.append((new_row, new_col))
 
         moves.extend(self._get_capture_moves(pos))
+        
+        self.move_cache[cache_key] = moves
         return moves
 
     def _get_capture_moves(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
         if not self.current_player:
             return []
-
+            
+        board_tuple = tuple(map(tuple, self.board))
+        current_player_value = self.current_player.value
+        cache_key = (pos, board_tuple, current_player_value)
+        
+        if cache_key in self.capture_cache:
+            return self.capture_cache[cache_key]
+            
         captures = set()
         current_player = self.current_player.value
         opponent = (
@@ -283,8 +301,11 @@ class SurakartaEnv(gym.Env):
         captures.update(follow_path(self, "down"))
         captures.update(follow_path(self, "left"))
         captures.update(follow_path(self, "right"))
-
-        return list(captures)
+        
+        result = list(captures)
+        self.capture_cache[cache_key] = result
+        
+        return result
 
     def _check_win(self) -> Optional[Player]:
         black_pieces = np.count_nonzero(self.board == Player.BLACK.value)
