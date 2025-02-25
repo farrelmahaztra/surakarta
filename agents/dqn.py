@@ -10,24 +10,39 @@ class SurakartaNet(nn.Module):
     def __init__(self, board_size=6):
         super().__init__()
         self.board_size = board_size
-
+        
         self.conv1 = nn.Conv2d(2, 32, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm2d(32)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(64)
-
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
+        self.bn3 = nn.BatchNorm2d(64)
+        
         self.flat_size = 64 * board_size * board_size
-
-        self.fc1 = nn.Linear(self.flat_size, 256)
-        self.ln1 = nn.LayerNorm(256)
-        self.fc2 = nn.Linear(256, board_size * board_size * board_size * board_size)
-
+        
+        self.adv_fc1 = nn.Linear(self.flat_size, 256)
+        self.adv_ln1 = nn.LayerNorm(256)
+        self.adv_fc2 = nn.Linear(256, board_size * board_size * board_size * board_size)
+        
+        self.val_fc1 = nn.Linear(self.flat_size, 256)
+        self.val_ln1 = nn.LayerNorm(256)
+        self.val_fc2 = nn.Linear(256, 1)
+    
     def forward(self, x):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
+        x = F.relu(self.bn3(self.conv3(x)))
         x = x.view(-1, self.flat_size)
-        x = F.relu(self.ln1(self.fc1(x)))
-        return self.fc2(x)
+        
+        val = F.relu(self.val_ln1(self.val_fc1(x)))
+        val = self.val_fc2(val)
+        
+        adv = F.relu(self.adv_ln1(self.adv_fc1(x)))
+        adv = self.adv_fc2(adv)
+        
+        q = val + adv - adv.mean(dim=1, keepdim=True)
+        
+        return q
 
 
 class SurakartaRLAgent:

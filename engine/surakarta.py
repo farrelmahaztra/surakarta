@@ -113,7 +113,7 @@ class SurakartaEnv(gym.Env):
         terminated = winner is not None
 
         if terminated:
-            reward = 3.0 if winner == self.current_player else -3.0
+            reward = 10.0 if winner == self.current_player else -10.0
 
         self.current_player = (
             Player.WHITE if self.current_player == Player.BLACK else Player.BLACK
