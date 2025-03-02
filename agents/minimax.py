@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Tuple, Optional, List
+import random 
 from engine.surakarta import Player
 
 class MinimaxSurakartaAgent:
@@ -8,39 +9,50 @@ class MinimaxSurakartaAgent:
 
     def get_action(self, env) -> Optional[Tuple[int, int, int, int]]:
         board = env.board
-
+        
         all_actions = self._get_all_valid_actions(env)
         capture_actions = self._filter_capture_actions(env, all_actions)
-
+        
         actions_to_consider = capture_actions if capture_actions else all_actions
-
-        best_value = float("-inf")
-        best_action = None
-
+        
+        if not actions_to_consider:
+            return None
+            
+        action_values = []
+        
         for action in actions_to_consider:
             board_copy = board.copy()
             from_row, from_col, to_row, to_col = action
-
+            
             temp_piece = board_copy[from_row, from_col]
             board_copy[to_row, to_col] = temp_piece
             board_copy[from_row, from_col] = Player.NONE.value
-
+            
             value, _ = self._minimax(
                 env, board_copy, self.max_depth - 1, float("-inf"), float("inf"), False
             )
-
+            
             is_capture = env.board[to_row, to_col] != Player.NONE.value
             if is_capture:
-                value += 10 
-
-            if value > best_value:
-                best_value = value
-                best_action = action
-
+                value += 10  
+                
+            noise_factor = 0.5
+            value += random.uniform(-noise_factor, noise_factor)
+            
+            action_values.append((value, action))
+        
+        action_values.sort(reverse=True, key=lambda x: x[0])
+        
+        n_best = min(3, len(action_values)) 
+        
+        weights = [n_best - i for i in range(n_best)]
+        selected_index = random.choices(range(n_best), weights=weights, k=1)[0]
+        
+        best_action = action_values[selected_index][1]
+        
         return best_action
 
     def _filter_capture_actions(self, env, actions) -> List[Tuple[int, int, int, int]]:
-        """Filter actions to only those that result in captures."""
         capture_actions = []
         for action in actions:
             _, _, to_row, to_col = action
@@ -74,7 +86,7 @@ class MinimaxSurakartaAgent:
                 eval, _ = self._minimax(env, board_copy, depth - 1, alpha, beta, False)
 
                 if is_capture:
-                    eval += 5
+                    eval += 5 
 
                 if eval > max_eval:
                     max_eval = eval
@@ -102,7 +114,7 @@ class MinimaxSurakartaAgent:
                 eval, _ = self._minimax(env, board_copy, depth - 1, alpha, beta, True)
 
                 if is_capture:
-                    eval -= 5  
+                    eval -= 5 
 
                 if eval < min_eval:
                     min_eval = eval
@@ -131,15 +143,12 @@ class MinimaxSurakartaAgent:
     def _evaluate_position(self, board, current_player) -> float:
         black_pieces = np.count_nonzero(board == Player.BLACK.value)
         white_pieces = np.count_nonzero(board == Player.WHITE.value)
-
-        material_score = (black_pieces - white_pieces) * 10
-
+        
         center_mask = np.zeros_like(board)
         center_mask[2:4, 2:4] = 1
         black_center = np.sum((board == Player.BLACK.value) & (center_mask == 1))
         white_center = np.sum((board == Player.WHITE.value) & (center_mask == 1))
-        position_score = (black_center - white_center) * 3
-
+        
         arc_positions = [(0, 1), (0, 4), (1, 0), (1, 5), (4, 0), (4, 5), (5, 1), (5, 4)]
         black_arc = sum(
             1 for pos in arc_positions if board[pos[0], pos[1]] == Player.BLACK.value
@@ -147,11 +156,20 @@ class MinimaxSurakartaAgent:
         white_arc = sum(
             1 for pos in arc_positions if board[pos[0], pos[1]] == Player.WHITE.value
         )
-        arc_score = (black_arc - white_arc) * 2
-
+        
+        material_diff = (black_pieces - white_pieces) * 10
+        position_diff = (black_center - white_center) * 3
+        arc_diff = (black_arc - white_arc) * 2
+        
+        if current_player == Player.BLACK.value:
+            material_score = material_diff
+            position_score = position_diff
+            arc_score = arc_diff
+        else: 
+            material_score = -material_diff
+            position_score = -position_diff
+            arc_score = -arc_diff
+        
         total_score = material_score + position_score + arc_score
-
-        if current_player == Player.WHITE:
-            total_score = -total_score
-
+        
         return total_score
