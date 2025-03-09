@@ -42,16 +42,11 @@ class DefensiveSurakartaAgent:
         current_player = env.current_player.value
         opponent = Player.WHITE.value if current_player == Player.BLACK.value else Player.BLACK.value
         
-        # Find all opponent pieces
         opponent_positions = np.argwhere(env.board == opponent)
         
-        # For each opponent piece, get all its potential capture moves
         for o_row, o_col in opponent_positions:
-            # We need to get potential captures, so we check what moves each opponent
-            # piece would have if it were their turn
             captures = env._get_capture_moves((o_row, o_col))
             
-            # Add any of our pieces that could be captured to the threatened list
             for capture_row, capture_col in captures:
                 if env.board[capture_row, capture_col] == current_player:
                     threatened_pieces.add((capture_row, capture_col))

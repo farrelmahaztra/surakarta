@@ -5,6 +5,8 @@ import numpy as np
 import math
 from enum import Enum
 from typing import Optional, Dict, Tuple, List
+from collections import deque
+
 
 class Player(Enum):
     NONE = 0
@@ -36,6 +38,7 @@ class SurakartaEnv(gym.Env):
         }
 
         self.action_space = spaces.MultiDiscrete([6, 6, 6, 6])
+        self.action_history: deque = deque(maxlen=10)
 
         self.observation_space = spaces.Dict(
             {
@@ -50,9 +53,10 @@ class SurakartaEnv(gym.Env):
         self.clock = None
 
         self.board: Optional[np.ndarray[tuple[int, int], np.dtype[np.int8]]] = None
-        self.current_player: Optional[Player] = None
+        self.current_player = Player.BLACK
         self.selected_piece: Optional[Tuple[int, int]] = None
         self.valid_moves: List[Tuple[int, int]] = []
+        self._previous_piece_count = 12
 
         self.arcs = {
             "top_left_inner": [(1, 0), (0, 1)],
@@ -64,6 +68,9 @@ class SurakartaEnv(gym.Env):
             "bottom_right_inner": [(4, 5), (5, 4)],
             "bottom_right_outer": [(3, 5), (5, 3)],
         }
+
+        self.move_history = []
+        self.repetition_threshold = 3
 
     def reset(self, seed=None, options=None) -> Tuple[Dict, Dict]:
         super().reset(seed=seed)
@@ -80,23 +87,69 @@ class SurakartaEnv(gym.Env):
             self._render_frame()
 
         return self._get_obs(), self._get_info()
-    
-    def get_intermediate_reward(self, action):
-        _, _, to_row, to_col = action
 
+    def _is_vulnerable_position(self, row: int, col: int) -> bool:
+        opponent = Player.WHITE if self.current_player == Player.BLACK else Player.BLACK
+        opponent_positions = np.argwhere(self.board == opponent.value)
+
+        for opp_row, opp_col in opponent_positions:
+            if (row, col) in self._get_capture_moves((opp_row, opp_col)):
+                return True
+
+        return False
+
+    def get_intermediate_reward(self, action):
+        from_row, from_col, to_row, to_col = action
         reward = 0
 
-        if self.board[to_row, to_col] != 0: 
-            reward += 0.5
+        opponent = Player.WHITE if self.current_player == Player.BLACK else Player.BLACK
+        if self.board[to_row, to_col] != 0:
+            opponent_count = np.count_nonzero(self.board == opponent.value)
+            capture_reward = 1.0 * (13 - opponent_count)
+            reward += capture_reward
 
-        if 2 <= to_row <= 3 and 2 <= to_col <= 3:
+        opponent_positions = np.argwhere(self.board == opponent.value)
+        
+        for opp_row, opp_col in opponent_positions:
+            if (opp_row, opp_col) in self._get_capture_moves((to_row, to_col)):
+                reward += 0.3 
+        
+        arc_endpoints = {(0, 1), (0, 4), (1, 0), (1, 5), (4, 0), (4, 5), (5, 1), (5, 4)}
+        if (to_row, to_col) in arc_endpoints:
+            reward += 0.2 
+        
+        edge_positions = set()
+        edge_positions.update((0, col) for col in range(6))
+        edge_positions.update((5, col) for col in range(6))
+        edge_positions.update((row, 0) for row in range(6))
+        edge_positions.update((row, 5) for row in range(6))
+        edge_positions -= arc_endpoints
+        
+        if (to_row, to_col) in edge_positions:
             reward += 0.1
+            
+        if self._is_vulnerable_position(from_row, from_col) and not self._is_vulnerable_position(to_row, to_col):
+            reward += 0.6 
+            
+        if not self._is_vulnerable_position(from_row, from_col) and self._is_vulnerable_position(to_row, to_col):
+            reward -= 0.4  
+   
+        self.move_history.append(action)
 
-        arc_positions = {(0, 1), (0, 4), (1, 0), (1, 5), (4, 0), (4, 5), (5, 1), (5, 4)}
-
-        if (to_row, to_col) in arc_positions:
-            reward += 0.1
-
+        if len(self.move_history) > 10: 
+            self.move_history.pop(0)
+    
+        repetition_penalty = 0
+        if len(self.move_history) >= 6: 
+            last_pair = (self.move_history[-1], self.move_history[-2])
+            second_last_pair = (self.move_history[-3], self.move_history[-4])
+            third_last_pair = (self.move_history[-5], self.move_history[-6])
+            
+            if last_pair == second_last_pair == third_last_pair:
+                repetition_penalty = -0.5 
+        
+        reward += repetition_penalty
+        
         return reward
 
     def step(self, action) -> Tuple[Dict, float, bool, bool, Dict]:
@@ -105,15 +158,16 @@ class SurakartaEnv(gym.Env):
         if not self._is_valid_move(from_row, from_col, to_row, to_col):
             return self._get_obs(), -1.0, False, False, self._get_info()
 
-        reward = self.get_intermediate_reward(action)
+        reward = 0.0
 
+        reward += self.get_intermediate_reward(action)
         self._make_move(from_row, from_col, to_row, to_col)
 
         winner = self._check_win()
         terminated = winner is not None
 
         if terminated:
-            reward = 10.0 if winner == self.current_player else -10.0
+            reward = 100.0 if winner == self.current_player else -10.0
 
         self.current_player = (
             Player.WHITE if self.current_player == Player.BLACK else Player.BLACK
@@ -348,21 +402,6 @@ class SurakartaEnv(gym.Env):
                 (self.board_offset + (self.board_size - 1) * self.cell_size, pos),
             )
 
-        for row in range(self.board_size):
-            for col in range(self.board_size):
-                piece = self.board[row, col]
-                if piece != Player.NONE.value:
-                    center = (
-                        col * self.cell_size + self.board_offset,
-                        row * self.cell_size + self.board_offset,
-                    )
-                    color = (
-                        self.colors["BLACK_PIECE"]
-                        if piece == Player.BLACK.value
-                        else self.colors["WHITE_PIECE"]
-                    )
-                    pygame.draw.circle(canvas, color, center, self.piece_radius)
-
         arc_radii = [self.cell_size, self.cell_size * 2]
 
         for corner in [(0, 0), (0, 5), (5, 0), (5, 5)]:
@@ -395,6 +434,21 @@ class SurakartaEnv(gym.Env):
                     math.radians(end_angle),
                     2,
                 )
+
+        for row in range(self.board_size):
+            for col in range(self.board_size):
+                piece = self.board[row, col]
+                if piece != Player.NONE.value:
+                    center = (
+                        col * self.cell_size + self.board_offset,
+                        row * self.cell_size + self.board_offset,
+                    )
+                    color = (
+                        self.colors["BLACK_PIECE"]
+                        if piece == Player.BLACK.value
+                        else self.colors["WHITE_PIECE"]
+                    )
+                    pygame.draw.circle(canvas, color, center, self.piece_radius)
 
         if self.render_mode == "human":
             self.window.blit(canvas, canvas.get_rect())
