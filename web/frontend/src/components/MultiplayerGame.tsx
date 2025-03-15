@@ -182,7 +182,7 @@ const MultiplayerGame = ({ matchId, onReturnToMenu, onReturnToMatchmaking }: Mul
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
           <p>Loading match...</p>
         </div>
       </div>
@@ -202,7 +202,7 @@ const MultiplayerGame = ({ matchId, onReturnToMenu, onReturnToMatchmaking }: Mul
           <div className="flex justify-center space-x-4">
             <button
               onClick={onReturnToMatchmaking}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
+              className="px-4 py-2 bg-green-900 hover:bg-green-800 text-white rounded-md"
             >
               Back to Matchmaking
             </button>
@@ -232,7 +232,7 @@ const MultiplayerGame = ({ matchId, onReturnToMenu, onReturnToMatchmaking }: Mul
               {multiplayerState.current_turn || "Loading..."}
               {multiplayerState.current_turn === currentUsername && " (Your Turn)"}
             </p>
-            <p className={`text-center mt-2 font-semibold ${isMyTurn ? 'text-green-600' : 'text-gray-600'}`}>
+            <p className={`text-center mt-2 font-semibold ${isMyTurn ? 'text-green-700' : 'text-gray-600'}`}>
               {multiplayerState.black_player === currentUsername ? '(Black) ' : '(White) '}
               {isMyTurn ? 'Your turn to move' : 'Waiting for opponent...'}
             </p>
@@ -267,10 +267,10 @@ const MultiplayerGame = ({ matchId, onReturnToMenu, onReturnToMatchmaking }: Mul
         <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center z-10">
           <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md">
             <h2 className={`text-4xl font-bold mb-4 ${gameResult === 'win'
-              ? 'text-green-600'
+              ? 'text-green-700'
               : gameResult === 'lose'
                 ? 'text-red-600'
-                : 'text-blue-600'
+                : 'text-green-700'
               }`}>
               {gameResult === 'win'
                 ? 'You Win!'
@@ -288,13 +288,13 @@ const MultiplayerGame = ({ matchId, onReturnToMenu, onReturnToMatchmaking }: Mul
             <div className="flex justify-center space-x-4">
               <button
                 onClick={onReturnToMenu}
-                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md"
+                className="px-4 py-2 bg-stone-9000 hover:bg-gray-600 text-white rounded-md"
               >
                 Return to Menu
               </button>
               <button
                 onClick={onReturnToMatchmaking}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
+                className="px-4 py-2 bg-green-900 hover:bg-green-800 text-white rounded-md"
               >
                 Back to Matchmaking
               </button>

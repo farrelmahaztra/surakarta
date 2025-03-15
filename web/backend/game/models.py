@@ -68,4 +68,5 @@ class Match(models.Model):
     
     def __str__(self):
         opponent_name = self.opponent.username if self.opponent else "Waiting for opponent"
-        return f"Match {self.game_id}: {self.creator.username} vs {opponent_name} ({self.status})"
+        game_id = self.game.game_id if self.game else "No game"
+        return f"Match {game_id}: {self.creator.username} vs {opponent_name} ({self.status})"

@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from .models import GameRecord, Match
 import numpy as np
+from uuid import uuid4
 
 AgentType = Union[MinimaxSurakartaAgent, SurakartaRLAgent]
 GameState = Dict[str, Union[SurakartaEnv, AgentType, List, User]]
@@ -153,7 +154,7 @@ class GameManager:
         white_player_name = white_player.username if white_player else "Waiting for opponent"
         current_turn_name = match.current_turn.username if match.current_turn else "Waiting for opponent"
         
-        print(f"Created multiplayer match: {match.game_id}, black: {black_player_name}, white: {white_player_name}")
+        print(f"Created multiplayer match: {match.game.game_id if match.game else 'None'}, black: {black_player_name}, white: {white_player_name}")
         
         return {
             "observation": observation,
@@ -195,7 +196,7 @@ class GameManager:
         match.current_player_idx = 0
         match.save()
         
-        print(f"Joined match: {match.game_id}, black: {black_player.username}, white: {white_player.username}")
+        print(f"Joined match: {match.game.game_id if match.game else 'None'}, black: {black_player.username}, white: {white_player.username}")
         
         return {
             "observation": observation,
@@ -207,7 +208,7 @@ class GameManager:
     @classmethod
     def make_multiplayer_move(cls, game_id, move, user):
         try:
-            match = Match.objects.get(game_id=game_id)
+            match = Match.objects.get(game__game_id=game_id)
         except Match.DoesNotExist:
             raise ValueError("Match does not exist")
             
@@ -295,7 +296,7 @@ class GameManager:
         if terminated or truncated:
             winner = env._check_win()
             match.status = "completed"
-            
+        
             cls._update_multiplayer_results(match, winner, env, info)
         
         match.save()
@@ -412,7 +413,7 @@ class GameManager:
         white_player = match.white_player
         
         if not black_player or not white_player:
-            print(f"Warning: Missing players in completed match {match.game_id}")
+            print(f"Warning: Missing players in completed match {match.game.game_id if match.game else 'None'}")
             return
         
         try:
@@ -456,9 +457,10 @@ class GameManager:
             white_profile.save()
             
             if not match.game:
+                new_game_id = f"{str(uuid4())}"
                 black_game_record = GameRecord.objects.create(
                     user=black_player,
-                    game_id=match.game_id,
+                    game_id=new_game_id,
                     opponent_type='multiplayer',
                     start_time=match.created_at,
                     end_time=timezone.now(),
@@ -472,7 +474,7 @@ class GameManager:
                 
                 GameRecord.objects.create(
                     user=white_player,
-                    game_id=f"{match.game_id}_w", 
+                    game_id=f"{new_game_id}_w", 
                     opponent_type='multiplayer',
                     start_time=match.created_at,
                     end_time=timezone.now(),
@@ -480,6 +482,10 @@ class GameManager:
                     final_score=white_score,
                     result=white_result
                 )
+
+            match.game.result = black_result if winner == 0 else white_result
+            match.game.final_score = black_score if winner == 0 else white_score
+            match.game.save()
             
         except Exception as e:
             import traceback
@@ -492,7 +498,14 @@ class GameManager:
             game_record = GameRecord.objects.get(game_id=game_id)
             game_record.end_time = timezone.now()
             
-            score = 12 - info.get('white_pieces', 0) if info else 0
+            player_color = cls._games[game_id].get("player_color", "black")
+            player_is_black = (player_color == "black")
+            
+            if player_is_black:
+                score = 12 - info.get('white_pieces', 0) if info else 0
+            else:
+                score = 12 - info.get('black_pieces', 0) if info else 0
+                
             game_record.final_score = score
             game_record.result = 'win' if player_won else 'loss'
             

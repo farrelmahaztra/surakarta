@@ -86,8 +86,6 @@ const Matchmaking = ({ onStartMultiplayerGame, onBackToMenu }: MatchmakingProps)
     onStartMultiplayerGame(matchId);
   };
 
-  console.log({ openMatches, myMatches });
-
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
@@ -99,21 +97,19 @@ const Matchmaking = ({ onStartMultiplayerGame, onBackToMenu }: MatchmakingProps)
           Back
         </button>
       </div>
-
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
           {error}
         </div>
       )}
-
       <div className="mb-8 p-4 bg-white rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4">Create a New Match</h3>
+        <h3 className="text-lg font-semibold mb-4 text-black">Create a New Match</h3>
         <div className="flex items-center mb-4">
-          <label className="mr-4">Choose your color preference:</label>
+          <label className="mr-4 text-black">Choose your color preference:</label>
           <select
             value={createMatchColor}
             onChange={(e) => setCreateMatchColor(e.target.value as PlayerColor)}
-            className="px-3 py-2 border border-gray-300 rounded-md"
+            className="px-3 py-2 bg-stone-100 text-black border border-gray-300 rounded-md"
             disabled={loading}
           >
             <option value={PlayerColor.Random}>Random</option>
@@ -124,57 +120,12 @@ const Matchmaking = ({ onStartMultiplayerGame, onBackToMenu }: MatchmakingProps)
         <button
           onClick={handleCreateMatch}
           disabled={loading}
-          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md"
+          className="px-4 py-2 bg-green-900 hover:bg-green-800 text-white rounded-md"
         >
           {loading ? 'Creating...' : 'Create Match'}
         </button>
       </div>
-
       <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-4">My Active Matches</h3>
-        {myMatches.length === 0 ? (
-          <p className="text-gray-500">You don't have any active matches.</p>
-        ) : (
-          <div className="grid gap-4">
-            {myMatches.map(match => (
-              <div key={match.id} className="p-4 bg-white rounded-lg shadow-md">
-                <div className="flex justify-between mb-2">
-                  <div>
-                    <span className="font-semibold">Match with: </span>
-                    {match.opponent_username || 'Waiting for opponent'}
-                  </div>
-                  <div className={`px-2 py-1 text-sm rounded-full ${match.status === MatchStatus.Open
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : match.status === MatchStatus.InProgress
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-blue-100 text-blue-800'
-                    }`}>
-                    {match.status}
-                  </div>
-                </div>
-                <div className="mb-2">
-                  <span className="text-sm text-gray-600">Created: {new Date(match.created_at).toLocaleString()}</span>
-                </div>
-                <div className="mb-2">
-                  <span className="text-sm text-gray-600">
-                    Current turn: {match.current_turn_username || 'N/A'}
-                  </span>
-                </div>
-                {match.status === MatchStatus.InProgress && (
-                  <button
-                    onClick={() => handleContinueMatch(match.id)}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md w-full"
-                  >
-                    Continue Match
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div>
         <h3 className="text-lg font-semibold mb-4">Open Matches to Join</h3>
         {openMatches.length === 0 ? (
           <p className="text-gray-500">No open matches available to join.</p>
@@ -200,10 +151,53 @@ const Matchmaking = ({ onStartMultiplayerGame, onBackToMenu }: MatchmakingProps)
                 <button
                   onClick={() => handleJoinMatch(match.id)}
                   disabled={loading}
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md w-full"
+                  className="px-4 py-2 bg-green-900 hover:bg-green-800 text-white rounded-md w-full"
                 >
                   {loading ? 'Joining...' : 'Join Match'}
                 </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold mb-4">My Active Matches</h3>
+        {myMatches.length === 0 ? (
+          <p className="text-gray-500">You don't have any active matches.</p>
+        ) : (
+          <div className="grid gap-4">
+            {myMatches.map(match => (
+              <div key={match.id} className="p-4 bg-white rounded-lg shadow-md">
+                <div className="flex justify-between mb-2 text-black">
+                  <div>
+                    <span className="font-semibold">Match with: </span>
+                    {match.opponent_username || 'Waiting for opponent'}
+                  </div>
+                  <div className={`px-2 py-1 text-sm rounded-full ${match.status === MatchStatus.Open
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : match.status === MatchStatus.InProgress
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-blue-100 text-blue-800'
+                    }`}>
+                    {match.status}
+                  </div>
+                </div>
+                <div className="mb-2">
+                  <span className="text-sm text-gray-600">Created: {new Date(match.created_at).toLocaleString()}</span>
+                </div>
+                <div className="mb-2">
+                  <span className="text-sm text-gray-600">
+                    Current turn: {match.current_turn_username || 'N/A'}
+                  </span>
+                </div>
+                {match.status === MatchStatus.InProgress && (
+                  <button
+                    onClick={() => handleContinueMatch(match.id)}
+                    className="px-4 py-2 bg-green-900 hover:bg-green-800 text-white rounded-md w-full"
+                  >
+                    Continue Match
+                  </button>
+                )}
               </div>
             ))}
           </div>

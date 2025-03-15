@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { userApi, matchApi } from '../api/game';
-import { UserProfile as UserProfileType, GameRecord } from '../types';
+import { UserProfile as UserProfileType, GameRecord, Match } from '../types';
 
 interface UserProfileProps {
   onLogout: () => void;
@@ -8,7 +8,7 @@ interface UserProfileProps {
 
 const UserProfile = ({ onLogout }: UserProfileProps) => {
   const [profile, setProfile] = useState<UserProfileType | null>(null);
-  const [gameHistory, setGameHistory] = useState<GameRecord[]>([]);
+  const [gameHistory, setGameHistory] = useState<GameRecord[] | Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,12 +20,12 @@ const UserProfile = ({ onLogout }: UserProfileProps) => {
         setProfile(profileData);
 
         const historyData = await userApi.getGameHistory();
-        const completedSinglePlayerGames = historyData.filter(game => game.result !== null);
+        const completedSinglePlayerGames = historyData.filter((game: GameRecord) => game.result !== null);
 
         const myMatches = await matchApi.getMyMatches();
         console.log("completedSinglePlayerGames:", completedSinglePlayerGames);
 
-        const completedMatches = myMatches.filter(match =>
+        const completedMatches = myMatches.filter((match: Match) =>
           match.status === 'completed'
         );
         console.log("Completed matches:", completedMatches);
@@ -45,11 +45,6 @@ const UserProfile = ({ onLogout }: UserProfileProps) => {
     fetchUserData();
   }, []);
 
-  const handleLogout = () => {
-    userApi.logout();
-    onLogout();
-  };
-
   if (loading) {
     return <div className="text-center py-8">Loading profile...</div>;
   }
@@ -62,31 +57,25 @@ const UserProfile = ({ onLogout }: UserProfileProps) => {
     <div className="w-full max-w-4xl p-6 bg-white rounded-md shadow-md">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Profile: {profile?.username}</h2>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-        >
-          Logout
-        </button>
       </div>
 
       {profile && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-gray-100 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold">{profile.games_played}</div>
-            <div className="text-sm text-gray-600">Games Played</div>
+            <div className="text-2xl font-bold text-black">{profile.games_played}</div>
+            <div className="text-sm text-black">Games Played</div>
           </div>
           <div className="bg-green-100 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold">{profile.wins}</div>
-            <div className="text-sm text-gray-600">Wins</div>
+            <div className="text-2xl font-bold text-black">{profile.wins}</div>
+            <div className="text-sm text-black">Wins</div>
           </div>
           <div className="bg-red-100 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold">{profile.losses}</div>
-            <div className="text-sm text-gray-600">Losses</div>
+            <div className="text-2xl font-bold text-black">{profile.losses}</div>
+            <div className="text-sm text-black">Losses</div>
           </div>
           <div className="bg-blue-100 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold">{profile.highest_score}</div>
-            <div className="text-sm text-gray-600">Best Score</div>
+            <div className="text-2xl font-bold text-black">{profile.highest_score}</div>
+            <div className="text-sm text-black">Best Score</div>
           </div>
         </div>
       )}
@@ -99,29 +88,34 @@ const UserProfile = ({ onLogout }: UserProfileProps) => {
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white">
             <thead>
-              <tr className="bg-gray-200 text-gray-600 text-sm leading-normal">
+              <tr className="bg-gray-200 text-black text-sm leading-normal">
                 <th className="py-3 px-4 text-left">Date</th>
                 <th className="py-3 px-4 text-left">Opponent</th>
                 <th className="py-3 px-4 text-left">Result</th>
                 <th className="py-3 px-4 text-left">Score</th>
               </tr>
             </thead>
-            <tbody className="text-gray-600 text-sm">
+            <tbody className="text-black text-sm">
               {gameHistory
-                .filter(game => game.result !== null)
+                // @ts-ignore
+                .filter((game: GameRecord | Match) => game.status === "completed" || game.result !== null)
                 .map((game) => (
                   <tr key={game.id} className="border-b border-gray-200 hover:bg-gray-100">
                     <td className="py-3 px-4">
-                      {new Date(game.start_time).toLocaleDateString()}
+                      {/* @ts-ignore */}
+                      {new Date(game.created_at ?? game.start_time).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4 capitalize">
-                      {game.opponent_type === 'multiplayer'
-                        ? `${game.opponent_name || 'Unknown'} (Multiplayer)`
+                      {/* @ts-ignore */}
+                      {game.opponent_username
+                        // @ts-ignore
+                        ? `${game.opponent_username || 'Unknown'} (Multiplayer)`
+                        // @ts-ignore
                         : `${game.opponent_type} Agent`}
                     </td>
                     <td className="py-3 px-4">
                       <span className={`font-bold ${game.result === 'win'
-                        ? 'text-green-500'
+                        ? 'text-green-600'
                         : game.result === 'loss'
                           ? 'text-red-500'
                           : 'text-gray-500'

@@ -133,7 +133,7 @@ const Game = ({ onReturnToMenu, mode = 'single' }: GameProps) => {
             {showGameEnd && (
                 <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center z-10">
                     <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md">
-                        <h2 className={`text-4xl font-bold mb-4 ${gameResult === 'win' ? 'text-green-600' : 'text-red-600'}`}>
+                        <h2 className={`text-4xl font-bold mb-4 ${gameResult === 'win' ? 'text-green-700' : 'text-red-600'}`}>
                             {gameResult === 'win' ? 'You Win!' : 'You Lose!'}
                         </h2>
                         {gameState?.score !== undefined && (
@@ -144,7 +144,7 @@ const Game = ({ onReturnToMenu, mode = 'single' }: GameProps) => {
                         <div className="flex justify-center space-x-4">
                             <button
                                 onClick={handleReturnToMenu}
-                                className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded-lg"
+                                className="bg-green-900 hover:bg-green-800 text-white py-2 px-6 rounded-lg"
                             >
                                 Return to Menu
                             </button>
@@ -153,7 +153,7 @@ const Game = ({ onReturnToMenu, mode = 'single' }: GameProps) => {
                                     setShowGameEnd(false);
                                     startGame(AgentType.Rule, userColor);
                                 }}
-                                className="bg-green-500 hover:bg-green-600 text-white py-2 px-6 rounded-lg"
+                                className="bg-green-900 hover:bg-green-800 text-white py-2 px-6 rounded-lg"
                             >
                                 Play Again
                             </button>

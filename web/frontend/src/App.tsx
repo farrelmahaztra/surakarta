@@ -73,7 +73,7 @@ function App() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-stone-900">
         <Auth onAuthSuccess={handleAuthSuccess} />
       </div>
     );
@@ -81,25 +81,25 @@ function App() {
 
   if (!showGame && !showProfile && !showMatchmaking && !showMultiplayerGame) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-stone-900">
         <div className="max-w-md w-full p-6 bg-white rounded-md shadow-md text-center">
-          <h2 className="text-2xl font-bold mb-6">Surakarta Game</h2>
+          <h2 className="text-2xl font-bold mb-6 text-black">Surakarta</h2>
           <div className="space-y-4">
             <button
               onClick={handlePlaySingleplayer}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-md"
+              className="w-full bg-green-900 hover:bg-green-800 text-white font-bold py-3 px-4 rounded-md"
             >
               Play vs AI
             </button>
             <button
               onClick={handlePlayMultiplayer}
-              className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-md"
+              className="w-full bg-green-900 hover:bg-green-8000 text-white font-bold py-3 px-4 rounded-md"
             >
               Multiplayer
             </button>
             <button
               onClick={handleViewProfile}
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-md"
+              className="w-full bg-slate-500 hover:bg-slate-6000 text-white font-bold py-3 px-4 rounded-md"
             >
               View Profile & Game History
             </button>
@@ -117,7 +117,7 @@ function App() {
 
   if (showProfile) {
     return (
-      <div className="min-h-screen flex flex-col items-center p-4 bg-gray-50">
+      <div className="min-h-screen flex flex-col items-center p-4 bg-stone-900">
         <div className="w-full max-w-6xl">
           <div className="flex justify-end mb-4">
             <button
@@ -137,7 +137,7 @@ function App() {
 
   if (showMatchmaking) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="min-h-screen flex flex-col bg-stone-900">
         <div className="flex-grow">
           <Matchmaking
             onStartMultiplayerGame={handleStartMultiplayerGame}
@@ -150,7 +150,7 @@ function App() {
 
   if (showMultiplayerGame && activeMatchId !== null) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="min-h-screen flex flex-col bg-stone-900">
         <div className="flex justify-end p-4">
           <button
             onClick={handleReturnToMatchmaking}
@@ -160,7 +160,7 @@ function App() {
           </button>
           <button
             onClick={handleViewProfile}
-            className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md"
+            className="bg-green-900 hover:bg-green-800 text-white font-bold py-2 px-4 rounded-md"
           >
             Profile
           </button>
@@ -180,7 +180,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-stone-900">
       <div className="flex justify-end p-4">
         <button
           onClick={() => {
@@ -189,12 +189,6 @@ function App() {
           className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md mr-2"
         >
           Back
-        </button>
-        <button
-          onClick={handleViewProfile}
-          className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md"
-        >
-          Profile
         </button>
       </div>
       <div className="flex-grow flex items-center justify-center">

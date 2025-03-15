@@ -24,8 +24,8 @@ export default function Controls({ onStartGame, disabled }: ControlsProps) {
                             transition-colors
                             font-medium
                             ${playerColor === PlayerColor.Black
-                                ? 'bg-gray-900 text-white border-2 border-white'
-                                : 'bg-gray-700 text-gray-200'}
+                                ? 'bg-gray-900 text-white border-2 border-green-600'
+                                : ''}
                         `}
                     >
                         Black (First)
@@ -38,8 +38,8 @@ export default function Controls({ onStartGame, disabled }: ControlsProps) {
                             transition-colors
                             font-medium
                             ${playerColor === PlayerColor.White
-                                ? 'bg-white text-gray-900 border-2 border-gray-900'
-                                : 'bg-gray-200 text-gray-700'}
+                                ? 'bg-gray-900 text-white border-2 border-green-600'
+                                : ''}
                         `}
                     >
                         White (Second)
@@ -52,8 +52,8 @@ export default function Controls({ onStartGame, disabled }: ControlsProps) {
                             transition-colors
                             font-medium
                             ${playerColor === PlayerColor.Random
-                                ? 'bg-gradient-to-r from-gray-900 to-white border-2 border-green-500 text-green-500'
-                                : 'bg-gradient-to-r from-gray-700 to-gray-200 text-green-300'}
+                                ? 'bg-gray-900 text-white border-2 border-green-600'
+                                : ''}
                         `}
                     >
                         Random

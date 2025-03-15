@@ -42,7 +42,7 @@ class GameViewSet(viewsets.ViewSet):
         print(f"make_move called with game_id={game_id}, move={move}")
         
         try:
-            match = Match.objects.get(game_id=game_id)
+            match = Match.objects.get(game__game_id=game_id)
             is_multiplayer = True
             print(f"Found multiplayer match: {match}")
         except:
@@ -72,6 +72,7 @@ class GameViewSet(viewsets.ViewSet):
                 return Response({"error": f"Server error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             print(f"Handling as single-player game")
+            print(f"GameManager._games: {GameManager._games}")
             if not game_id or game_id not in GameManager._games:
                 return Response({"error": "No active game"}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -79,6 +80,7 @@ class GameViewSet(viewsets.ViewSet):
                 result = GameManager.make_move(game_id, move)
                 return Response(result)
             except Exception as e:
+                print(f"Exception in make_move: {str(e)}")
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -157,11 +159,16 @@ class MatchViewSet(viewsets.ViewSet):
         
         if serializer.is_valid():
             game_id = str(uuid4())
-            print(f"Creating match with game_id: {game_id}")
+            game_record = GameRecord.objects.create(
+                user=request.user,
+                game_id=game_id,
+                opponent_type='multiplayer'
+            )
+            print(f"Created game record with ID: {game_record.id}, game_id: {game_id}")
             
             match = serializer.save(
                 creator=request.user,
-                game_id=game_id,
+                game=game_record,
                 status="open"
             )
             print(f"Match created in DB: {match}")
@@ -170,7 +177,7 @@ class MatchViewSet(viewsets.ViewSet):
             print(f"Match initialized in game manager: {match_data}")
             
             return Response({
-                "match": MatchSerializer(match).data,
+                "match": MatchSerializer(match, context={'request': request}).data,
                 "game_state": match_data
             }, status=status.HTTP_201_CREATED)
         
@@ -182,7 +189,7 @@ class MatchViewSet(viewsets.ViewSet):
             
         matches = query.order_by('-created_at')
         
-        serializer = MatchSerializer(matches, many=True)
+        serializer = MatchSerializer(matches, many=True, context={'request': request})
         return Response(serializer.data)
     
     @action(detail=False, methods=["get"])
@@ -195,12 +202,12 @@ class MatchViewSet(viewsets.ViewSet):
         ).filter(
             creator=request.user
         ) | Match.objects.filter(
-            status__in=["matched", "in_progress"]
+            status__in=["matched", "in_progress", "completed"]
         ).filter(
             opponent=request.user
         ).order_by('-updated_at')
         
-        serializer = MatchSerializer(matches, many=True)
+        serializer = MatchSerializer(matches, many=True, context={'request': request})
         return Response(serializer.data)
     
     @action(detail=True, methods=["post"])
@@ -227,7 +234,7 @@ class MatchViewSet(viewsets.ViewSet):
             print(f"Join successful. Match data: {match_data}")
             
             return Response({
-                "match": MatchSerializer(match).data,
+                "match": MatchSerializer(match, context={'request': request}).data,
                 "game_state": match_data
             })
         except ValueError as e:
@@ -258,7 +265,7 @@ class MatchViewSet(viewsets.ViewSet):
             match_data = GameManager.get_match_state(match, request.user)
             
             return Response({
-                "match": MatchSerializer(match).data,
+                "match": MatchSerializer(match, context={'request': request}).data,
                 "game_state": match_data
             })
         except Exception as e:
@@ -286,6 +293,9 @@ class MatchViewSet(viewsets.ViewSet):
                 )
             
             match.status = "completed"
+            match.game.result = "loss"
+            match.game.final_score = 0
+            match.game.save()
             black_player = match.black_player
             white_player = match.white_player
             
@@ -316,7 +326,7 @@ class MatchViewSet(viewsets.ViewSet):
             
             match.save()
             
-            return Response({"status": "Match forfeited", "match": MatchSerializer(match).data})
+            return Response({"status": "Match forfeited", "match": MatchSerializer(match, context={'request': request}).data})
         except Exception as e:
             import traceback
             print(f"Error in forfeit_match: {str(e)}")

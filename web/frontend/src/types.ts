@@ -91,6 +91,8 @@ export interface Match {
     updated_at: string;
     current_turn_username: string | null;
     last_activity: string;
+    final_score: number | null;
+    result: 'win' | 'loss' | 'draw' | null;
 }
 
 export interface MatchDetail extends Match {
