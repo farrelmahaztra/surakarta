@@ -25,6 +25,8 @@ class UserProfile(models.Model):
     losses = models.IntegerField(default=0)
     draws = models.IntegerField(default=0)
     analytics_consent = models.BooleanField(default=False)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
     
     def __str__(self):
         return f"Profile for {self.user.username}"

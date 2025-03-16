@@ -452,33 +452,44 @@ class GameManager:
             
             if not match.game:
                 new_game_id = f"{str(uuid4())}"
+                
                 black_game_record = GameRecord.objects.create(
                     user=black_player,
                     game_id=new_game_id,
                     opponent_type='multiplayer',
                     start_time=match.created_at,
-                    end_time=timezone.now(),
                     moves=match.moves_history,
                     final_score=black_score,
                     result=black_result
                 )
                 
+                if black_player.profile.analytics_consent:
+                    black_game_record.end_time = timezone.now()
+                    black_game_record.save()
+                
                 match.game = black_game_record
                 match.save()
                 
-                GameRecord.objects.create(
+                white_game_record = GameRecord.objects.create(
                     user=white_player,
                     game_id=f"{new_game_id}_w", 
                     opponent_type='multiplayer',
                     start_time=match.created_at,
-                    end_time=timezone.now(),
                     moves=match.moves_history,
                     final_score=white_score,
                     result=white_result
                 )
+                
+                if white_player.profile.analytics_consent:
+                    white_game_record.end_time = timezone.now()
+                    white_game_record.save()
 
             match.game.result = black_result if winner == 0 else white_result
             match.game.final_score = black_score if winner == 0 else white_score
+            
+            if black_player.profile.analytics_consent and match.game.user == black_player:
+                match.game.end_time = timezone.now()
+            
             match.game.save()
             
         except Exception as e:
@@ -490,7 +501,6 @@ class GameManager:
     def _update_game_record(cls, game_id, user, info, player_won):
         try:
             game_record = GameRecord.objects.get(game_id=game_id)
-            game_record.end_time = timezone.now()
             
             player_color = cls._games[game_id].get("player_color", "black")
             player_is_black = (player_color == "black")
@@ -502,8 +512,11 @@ class GameManager:
                 
             game_record.final_score = score
             game_record.result = 'win' if player_won else 'loss'
-            
             game_record.moves = cls._games[game_id].get("moves", [])
+            
+            if user.profile.analytics_consent:
+                game_record.end_time = timezone.now()
+            
             game_record.save()
             
             profile = user.profile

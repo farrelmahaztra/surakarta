@@ -28,11 +28,31 @@ class GameViewSet(viewsets.ViewSet):
         
         observation, actual_player_color = GameManager.create_game(game_id, agent_type, user, player_color)
         request.session["game_id"] = game_id
+        
+        if user and user.profile.analytics_consent:
+            try:
+                ip_address = self._get_client_ip(request)
+                user_agent = request.META.get('HTTP_USER_AGENT', '')
+                
+                user.profile.ip_address = ip_address
+                user.profile.user_agent = user_agent
+                user.profile.save()
+            except UserProfile.DoesNotExist:
+                pass
+            
         return Response({
             "observation": observation, 
             "game_id": game_id,
             "player_color": actual_player_color
         })
+        
+    def _get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
 
     @action(detail=False, methods=["post"])
     def make_move(self, request):
@@ -214,6 +234,14 @@ class UserViewSet(viewsets.ViewSet):
 class MatchViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
     
+    def _get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+    
     @action(detail=False, methods=["post"])
     def create_match(self, request):
         serializer = CreateMatchSerializer(data=request.data, context={'request': request})
@@ -226,6 +254,14 @@ class MatchViewSet(viewsets.ViewSet):
                 opponent_type='multiplayer'
             )
             print(f"Created game record with ID: {game_record.id}, game_id: {game_id}")
+            
+            if request.user.profile.analytics_consent:
+                ip_address = self._get_client_ip(request)
+                user_agent = request.META.get('HTTP_USER_AGENT', '')
+                
+                request.user.profile.ip_address = ip_address
+                request.user.profile.user_agent = user_agent
+                request.user.profile.save()
             
             match = serializer.save(
                 creator=request.user,
