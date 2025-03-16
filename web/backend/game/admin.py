@@ -9,5 +9,5 @@ class GameRecordAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'games_played', 'wins', 'losses', 'draws', 'highest_score')
+    list_display = ('user', 'games_played', 'wins', 'losses', 'draws', 'analytics_consent')
     search_fields = ('user__username',)

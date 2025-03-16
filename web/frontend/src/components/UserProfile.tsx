@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { userApi, matchApi } from '../api/game';
-import { UserProfile as UserProfileType, GameRecord, Match } from '../types';
+import { userApi } from '../api/game';
+import { UserProfile as UserProfileType } from '../types';
 
 interface UserProfileProps {
   onLogout: () => void;
@@ -8,9 +8,17 @@ interface UserProfileProps {
 
 const UserProfile = ({ onLogout }: UserProfileProps) => {
   const [profile, setProfile] = useState<UserProfileType | null>(null);
-  const [gameHistory, setGameHistory] = useState<GameRecord[] | Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    current_password: '',
+    new_password: '',
+    analytics_consent: false
+  });
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -18,22 +26,13 @@ const UserProfile = ({ onLogout }: UserProfileProps) => {
       try {
         const profileData = await userApi.getUserProfile();
         setProfile(profileData);
-
-        const historyData = await userApi.getGameHistory();
-        const completedSinglePlayerGames = historyData.filter((game: GameRecord) => game.result !== null);
-
-        const myMatches = await matchApi.getMyMatches();
-        console.log("completedSinglePlayerGames:", completedSinglePlayerGames);
-
-        const completedMatches = myMatches.filter((match: Match) =>
-          match.status === 'completed'
-        );
-        console.log("Completed matches:", completedMatches);
-
-        const gameHistory = [...completedSinglePlayerGames, ...completedMatches].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
-
-        setGameHistory(gameHistory);
-
+        setFormData({
+          username: profileData.username,
+          email: profileData.email || '',
+          current_password: '',
+          new_password: '',
+          analytics_consent: profileData.analytics_consent || false
+        });
       } catch (err) {
         console.error('Error fetching user data:', err);
         setError('Failed to load profile data');
@@ -45,93 +44,191 @@ const UserProfile = ({ onLogout }: UserProfileProps) => {
     fetchUserData();
   }, []);
 
-  if (loading) {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value,
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+    setLoading(true);
+
+    try {
+      const updateData: any = {
+        username: formData.username,
+        email: formData.email,
+        analytics_consent: formData.analytics_consent
+      };
+
+      if (formData.current_password && formData.new_password) {
+        try {
+          await userApi.updatePassword(formData.current_password, formData.new_password);
+          setSuccessMessage('Profile and password updated successfully');
+        } catch (err: any) {
+          setError(err.message || 'Failed to update password');
+          setLoading(false);
+          return;
+        }
+      }
+
+      await userApi.updateProfile(updateData);
+
+      const updatedProfile = await userApi.getUserProfile();
+      setProfile(updatedProfile);
+
+      setFormData({
+        ...formData,
+        username: updatedProfile.username,
+        email: updatedProfile.email || '',
+        current_password: '',
+        new_password: '',
+        analytics_consent: updatedProfile.analytics_consent
+      });
+
+      if (!successMessage) {
+        setSuccessMessage('Profile updated successfully');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred while updating the profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+      try {
+        await userApi.deleteAccount();
+        onLogout();
+      } catch (err: any) {
+        setError(err.message || 'An error occurred while deleting the account');
+      }
+    }
+  };
+
+  if (loading && !profile) {
     return <div className="text-center py-8">Loading profile...</div>;
   }
 
-  if (error) {
+  if (error && !profile) {
     return <div className="text-center py-8 text-red-500">{error}</div>;
   }
 
   return (
     <div className="w-full max-w-4xl p-6 bg-white rounded-md shadow-md">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Profile: {profile?.username}</h2>
+        <h2 className="text-2xl font-bold text-black">User Profile</h2>
       </div>
 
-      {profile && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gray-100 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold text-black">{profile.games_played}</div>
-            <div className="text-sm text-black">Games Played</div>
-          </div>
-          <div className="bg-green-100 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold text-black">{profile.wins}</div>
-            <div className="text-sm text-black">Wins</div>
-          </div>
-          <div className="bg-red-100 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold text-black">{profile.losses}</div>
-            <div className="text-sm text-black">Losses</div>
-          </div>
-          <div className="bg-blue-100 p-4 rounded-md text-center">
-            <div className="text-2xl font-bold text-black">{profile.highest_score}</div>
-            <div className="text-sm text-black">Best Score</div>
-          </div>
+      <h3 className="text-xl font-bold mb-4 text-black">Edit Profile</h3>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+          {error}
         </div>
       )}
 
-      <h3 className="text-xl font-bold mb-4">Game History</h3>
-
-      {gameHistory.length === 0 ? (
-        <p className="text-gray-500 text-center py-4">No games played yet.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white">
-            <thead>
-              <tr className="bg-gray-200 text-black text-sm leading-normal">
-                <th className="py-3 px-4 text-left">Date</th>
-                <th className="py-3 px-4 text-left">Opponent</th>
-                <th className="py-3 px-4 text-left">Result</th>
-                <th className="py-3 px-4 text-left">Score</th>
-              </tr>
-            </thead>
-            <tbody className="text-black text-sm">
-              {gameHistory
-                // @ts-ignore
-                .filter((game: GameRecord | Match) => game.status === "completed" || game.result !== null)
-                .map((game) => (
-                  <tr key={game.id} className="border-b border-gray-200 hover:bg-gray-100">
-                    <td className="py-3 px-4">
-                      {/* @ts-ignore */}
-                      {new Date(game.created_at ?? game.start_time).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 px-4 capitalize">
-                      {/* @ts-ignore */}
-                      {game.opponent_username
-                        // @ts-ignore
-                        ? `${game.opponent_username || 'Unknown'} (Multiplayer)`
-                        // @ts-ignore
-                        : `${game.opponent_type} Agent`}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`font-bold ${game.result === 'win'
-                        ? 'text-green-600'
-                        : game.result === 'loss'
-                          ? 'text-red-500'
-                          : 'text-gray-500'
-                        }`}>
-                        {game.result?.toUpperCase() ?? 'Unknown'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      {game.final_score !== null ? game.final_score : '-'}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+      {successMessage && (
+        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
+          {successMessage}
         </div>
       )}
+
+      <form onSubmit={handleSubmit}>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
+            Username
+          </label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            className="w-full px-3 py-2 border border-gray-300 bg-stone-100 text-black rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
+            value={formData.username}
+            onChange={handleInputChange}
+            required
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+            Email (optional)
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            className="w-full px-3 py-2 border border-gray-300 bg-stone-100 text-black rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
+            value={formData.email}
+            onChange={handleInputChange}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="current_password">
+            Current Password (required to change password)
+          </label>
+          <input
+            type="password"
+            id="current_password"
+            name="current_password"
+            className="w-full px-3 py-2 border border-gray-300 bg-stone-100 text-black rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
+            value={formData.current_password}
+            onChange={handleInputChange}
+          />
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="new_password">
+            New Password
+          </label>
+          <input
+            type="password"
+            id="new_password"
+            name="new_password"
+            className="w-full px-3 py-2 border border-gray-300 bg-stone-100 text-black rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
+            value={formData.new_password}
+            onChange={handleInputChange}
+          />
+        </div>
+
+        <div className="mb-6">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              id="analytics_consent"
+              name="analytics_consent"
+              className="mr-2"
+              checked={formData.analytics_consent}
+              onChange={handleInputChange}
+            />
+            <span className="text-gray-700 text-sm">Allow anonymous gameplay data collection to help improve the game</span>
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <button
+            type="submit"
+            className="bg-green-900 hover:bg-green-800 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-opacity-50"
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : 'Save Changes'}
+          </button>
+
+          <button
+            type="button"
+            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md"
+            onClick={handleDeleteAccount}
+          >
+            Delete Account
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

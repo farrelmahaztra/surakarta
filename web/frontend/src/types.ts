@@ -43,15 +43,17 @@ export interface UserCredentials {
 
 export interface UserRegistration extends UserCredentials {
     email?: string;
+    analytics_consent?: boolean;
 }
 
 export interface UserProfile {
     username: string;
+    email?: string;
     games_played: number;
     wins: number;
     losses: number;
     draws: number;
-    highest_score: number;
+    analytics_consent?: boolean;
 }
 
 export interface GameRecord {

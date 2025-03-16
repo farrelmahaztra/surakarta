@@ -188,6 +188,62 @@ export const userApi = {
         localStorage.removeItem('user');
     },
 
+    updateProfile: async (profileData: any) => {
+        const response = await fetch(`${API_URL}/users/profile/`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(profileData),
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to update profile');
+        }
+
+        return data;
+    },
+
+    updatePassword: async (currentPassword: string, newPassword: string) => {
+        const response = await fetch(`${API_URL}/users/update_password/`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                current_password: currentPassword,
+                new_password: newPassword
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update password');
+        }
+
+        const data = await response.json();
+        if (data.token) {
+            localStorage.setItem('authToken', data.token);
+        }
+
+        return data;
+    },
+
+    deleteAccount: async () => {
+        const response = await fetch(`${API_URL}/users/profile/`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete account');
+        }
+
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        
+        return true;
+    },
+
     getUserProfile: async () => {
         const response = await fetch(`${API_URL}/users/profile/`, {
             method: 'GET',

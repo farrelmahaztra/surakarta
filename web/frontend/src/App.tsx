@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Game from './components/Game'
 import Auth from './components/Auth'
 import UserProfile from './components/UserProfile'
+import GameHistory from './components/GameHistory'
 import Matchmaking from './components/Matchmaking'
 import MultiplayerGame from './components/MultiplayerGame'
 import { userApi } from './api/game'
@@ -13,6 +14,7 @@ function App() {
   const [showGame, setShowGame] = useState(false);
   const [showMatchmaking, setShowMatchmaking] = useState(false);
   const [showMultiplayerGame, setShowMultiplayerGame] = useState(false);
+  const [showGameHistory, setShowGameHistory] = useState(false);
   const [activeMatchId, setActiveMatchId] = useState<number | null>(null);
   const [_, setGameMode] = useState<GameMode>(GameMode.SinglePlayer);
 
@@ -32,6 +34,7 @@ function App() {
     setShowGame(false);
     setShowMatchmaking(false);
     setShowMultiplayerGame(false);
+    setShowGameHistory(false);
   };
 
   const handlePlaySingleplayer = () => {
@@ -40,6 +43,7 @@ function App() {
     setShowProfile(false);
     setShowMatchmaking(false);
     setShowMultiplayerGame(false);
+    setShowGameHistory(false);
   };
 
   const handlePlayMultiplayer = () => {
@@ -48,10 +52,20 @@ function App() {
     setShowProfile(false);
     setShowGame(false);
     setShowMultiplayerGame(false);
+    setShowGameHistory(false);
   };
 
   const handleViewProfile = () => {
     setShowProfile(true);
+    setShowGame(false);
+    setShowMatchmaking(false);
+    setShowMultiplayerGame(false);
+    setShowGameHistory(false);
+  };
+
+  const handleViewGameHistory = () => {
+    setShowGameHistory(true);
+    setShowProfile(false);
     setShowGame(false);
     setShowMatchmaking(false);
     setShowMultiplayerGame(false);
@@ -63,6 +77,7 @@ function App() {
     setShowMatchmaking(false);
     setShowGame(false);
     setShowProfile(false);
+    setShowGameHistory(false);
   };
 
   const handleReturnToMatchmaking = () => {
@@ -79,7 +94,7 @@ function App() {
     );
   }
 
-  if (!showGame && !showProfile && !showMatchmaking && !showMultiplayerGame) {
+  if (!showGame && !showProfile && !showMatchmaking && !showMultiplayerGame && !showGameHistory) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-stone-900">
         <div className="max-w-md w-full p-6 bg-white rounded-md shadow-md text-center">
@@ -98,10 +113,16 @@ function App() {
               Multiplayer
             </button>
             <button
+              onClick={handleViewGameHistory}
+              className="w-full bg-slate-500 hover:bg-slate-6000 text-white font-bold py-3 px-4 rounded-md"
+            >
+              Game History
+            </button>
+            <button
               onClick={handleViewProfile}
               className="w-full bg-slate-500 hover:bg-slate-6000 text-white font-bold py-3 px-4 rounded-md"
             >
-              View Profile & Game History
+              User Profile
             </button>
             <button
               onClick={handleLogout}
@@ -130,6 +151,26 @@ function App() {
             </button>
           </div>
           <UserProfile onLogout={handleLogout} />
+        </div>
+      </div>
+    );
+  }
+
+  if (showGameHistory) {
+    return (
+      <div className="min-h-screen flex flex-col items-center p-4 bg-stone-900">
+        <div className="w-full max-w-6xl">
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={() => {
+                setShowGameHistory(false);
+              }}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md"
+            >
+              Back
+            </button>
+          </div>
+          <GameHistory />
         </div>
       </div>
     );

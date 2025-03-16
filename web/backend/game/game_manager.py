@@ -447,12 +447,6 @@ class GameManager:
             black_score = 12 - info.get('white_pieces', 0) if info else 0
             white_score = 12 - info.get('black_pieces', 0) if info else 0
             
-            if black_score > black_profile.highest_score:
-                black_profile.highest_score = black_score
-                
-            if white_score > white_profile.highest_score:
-                white_profile.highest_score = white_score
-            
             black_profile.save()
             white_profile.save()
             
@@ -519,10 +513,7 @@ class GameManager:
                 profile.wins += 1
             else:
                 profile.losses += 1
-                
-            if score > profile.highest_score:
-                profile.highest_score = score
-                
+       
             profile.save()
         except GameRecord.DoesNotExist:
             pass

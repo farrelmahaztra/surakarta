@@ -24,7 +24,7 @@ class UserProfile(models.Model):
     wins = models.IntegerField(default=0)
     losses = models.IntegerField(default=0)
     draws = models.IntegerField(default=0)
-    highest_score = models.IntegerField(default=0)
+    analytics_consent = models.BooleanField(default=False)
     
     def __str__(self):
         return f"Profile for {self.user.username}"

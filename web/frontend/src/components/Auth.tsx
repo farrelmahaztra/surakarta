@@ -15,13 +15,14 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
     username: '',
     password: '',
     email: '',
+    analytics_consent: false,
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [name]: value,
+      [name]: type === 'checkbox' ? checked : value,
     });
   };
 
@@ -125,6 +126,21 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
             required
           />
         </div>
+        {!isLogin && (
+          <div className="mb-4">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                id="analytics_consent"
+                name="analytics_consent"
+                className="mr-2"
+                checked={formData.analytics_consent || false}
+                onChange={handleInputChange}
+              />
+              <span className="text-gray-700 text-sm">Allow anonymous gameplay data collection to help improve the game</span>
+            </label>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <button
             type="submit"

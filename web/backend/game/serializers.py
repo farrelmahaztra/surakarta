@@ -11,11 +11,29 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
+    username = serializers.CharField(source='user.username')
+    email = serializers.EmailField(source='user.email', required=False, allow_blank=True)
+    analytics_consent = serializers.BooleanField(required=False)
     
     class Meta:
         model = UserProfile
-        fields = ('username', 'games_played', 'wins', 'losses', 'draws', 'highest_score')
+        fields = ('username', 'email', 'games_played', 'wins', 'losses', 'draws', 'analytics_consent')
+        
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        
+        if 'username' in user_data:
+            instance.user.username = user_data['username']
+        if 'email' in user_data:
+            instance.user.email = user_data['email']
+        
+        instance.user.save()
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        instance.save()
+        return instance
 
 
 class GameRecordSerializer(serializers.ModelSerializer):
@@ -44,18 +62,21 @@ class GameRecordSerializer(serializers.ModelSerializer):
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    analytics_consent = serializers.BooleanField(required=False, default=False)
     
     class Meta:
         model = User
-        fields = ('username', 'email', 'password')
+        fields = ('username', 'email', 'password', 'analytics_consent')
     
     def create(self, validated_data):
+        analytics_consent = validated_data.pop('analytics_consent', False)
+        
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data.get('email', ''),
             password=validated_data['password']
         )
-        UserProfile.objects.create(user=user)
+        UserProfile.objects.create(user=user, analytics_consent=analytics_consent)
         return user
 
 

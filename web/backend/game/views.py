@@ -100,6 +100,42 @@ class UserViewSet(viewsets.ViewSet):
             }, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    @action(detail=False, methods=["post"])
+    def update_password(self, request):
+        if not request.user.is_authenticated:
+            return Response(
+                {"error": "Authentication required"}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+            
+        current_password = request.data.get("current_password")
+        new_password = request.data.get("new_password")
+        
+        if not current_password or not new_password:
+            return Response(
+                {"error": "Both current and new password are required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        user = authenticate(username=request.user.username, password=current_password)
+        
+        if not user:
+            return Response(
+                {"error": "Current password is incorrect"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        user.set_password(new_password)
+        user.save()
+        
+        Token.objects.filter(user=user).delete()
+        token, _ = Token.objects.get_or_create(user=user)
+        
+        return Response({
+            "message": "Password updated successfully",
+            "token": token.key
+        })
     
     @action(detail=False, methods=["post"])
     def login(self, request):
@@ -120,7 +156,7 @@ class UserViewSet(viewsets.ViewSet):
             status=status.HTTP_401_UNAUTHORIZED
         )
     
-    @action(detail=False, methods=["get"])
+    @action(detail=False, methods=["get", "put", "delete"])
     def profile(self, request):
         if not request.user.is_authenticated:
             return Response(
@@ -130,12 +166,37 @@ class UserViewSet(viewsets.ViewSet):
             
         try:
             profile = request.user.profile
-            serializer = UserProfileSerializer(profile)
-            return Response(serializer.data)
         except UserProfile.DoesNotExist:
             profile = UserProfile.objects.create(user=request.user)
+            
+        if request.method == "GET":
             serializer = UserProfileSerializer(profile)
             return Response(serializer.data)
+        elif request.method == "PUT":
+            serializer = UserProfileSerializer(profile, data=request.data, partial=True)
+            if serializer.is_valid():
+                try:
+                    serializer.save()
+                    return Response(serializer.data)
+                except Exception as e:
+                    error_message = str(e)
+                    if "username" in error_message.lower() and "exists" in error_message.lower():
+                        return Response({"error": "This username is already taken. Please choose a different one."}, 
+                                       status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"error": "Failed to update profile"}, 
+                                   status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        elif request.method == "DELETE":
+            user = request.user
+            with transaction.atomic():
+                Token.objects.filter(user=user).delete()
+                
+                user.delete()
+                
+            return Response(
+                {"message": "Account successfully deleted"},
+                status=status.HTTP_200_OK
+            )
     
     @action(detail=False, methods=["get"])
     def game_history(self, request):
