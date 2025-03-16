@@ -29,6 +29,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
         
         instance.user.save()
         
+        if 'analytics_consent' in validated_data and instance.analytics_consent and not validated_data['analytics_consent']:
+            user_games = GameRecord.objects.filter(user=instance.user)
+            
+            for game in user_games:
+                game.end_time = None
+                game.save()
+            
+            instance.user.profile.ip_address = None
+            instance.user.profile.user_agent = None
+        
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         
