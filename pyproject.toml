@@ -18,4 +18,5 @@ dependencies = [
   "django",
   "djangorestframework",
   "django-cors-headers",
+  "tabulate",
 ]

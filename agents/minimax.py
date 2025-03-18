@@ -32,7 +32,10 @@ class MinimaxSurakartaAgent:
                 env, board_copy, self.max_depth - 1, float("-inf"), float("inf"), False
             )
             
-            is_capture = env.board[to_row, to_col] != Player.NONE.value
+            is_capture = (
+                env.board[to_row, to_col] != Player.NONE.value
+                and env.board[to_row, to_col] != env.current_player.value
+            )
             if is_capture:
                 value += 10  
                 
@@ -64,10 +67,26 @@ class MinimaxSurakartaAgent:
         return capture_actions
 
     def _minimax(
-        self, env, board, depth, alpha, beta, is_maximizing
-    ) -> Tuple[float, Optional[Tuple[int, int, int, int]]]:
-        if depth == 0 or env._check_win() is not None:
+    self, env, board, depth, alpha, beta, is_maximizing
+) -> Tuple[float, Optional[Tuple[int, int, int, int]]]:
+        black_pieces = np.count_nonzero(board == Player.BLACK.value)
+        white_pieces = np.count_nonzero(board == Player.WHITE.value)
+        
+        if black_pieces == 0:
+            return float("-inf") if env.current_player == Player.BLACK else float("inf"), None
+        elif white_pieces == 0:
+            return float("inf") if env.current_player == Player.BLACK else float("-inf"), None
+
+        if depth == 0:
             return self._evaluate_position(board, env.current_player), None
+
+        current_player = env.current_player
+        opponent = Player.WHITE if current_player == Player.BLACK else Player.BLACK
+
+        original_board = env.board.copy()
+        original_player = env.current_player
+        
+        env.board = board.copy()
 
         if is_maximizing:
             max_eval = float("-inf")
@@ -77,16 +96,21 @@ class MinimaxSurakartaAgent:
                 board_copy = board.copy()
                 from_row, from_col, to_row, to_col = action
 
-                is_capture = board_copy[to_row, to_col] != Player.NONE.value
+                is_capture = (board_copy[to_row, to_col] != Player.NONE.value and 
+                            board_copy[to_row, to_col] == opponent.value)
 
                 temp_piece = board_copy[from_row, from_col]
                 board_copy[to_row, to_col] = temp_piece
                 board_copy[from_row, from_col] = Player.NONE.value
 
+                env.current_player = opponent
+                
                 eval, _ = self._minimax(env, board_copy, depth - 1, alpha, beta, False)
+                
+                env.current_player = current_player
 
                 if is_capture:
-                    eval += 5 
+                    eval += 5
 
                 if eval > max_eval:
                     max_eval = eval
@@ -96,25 +120,38 @@ class MinimaxSurakartaAgent:
                 if beta <= alpha:
                     break
 
+            env.board = original_board
+            env.current_player = original_player
+            
+            if best_action is None:
+                return self._evaluate_position(board, current_player), None
+                
             return max_eval, best_action
         else:
             min_eval = float("inf")
             best_action = None
 
+            env.current_player = opponent
+            
             for action in self._get_all_valid_actions(env):
                 board_copy = board.copy()
                 from_row, from_col, to_row, to_col = action
 
-                is_capture = board_copy[to_row, to_col] != Player.NONE.value
+                is_capture = (board_copy[to_row, to_col] != Player.NONE.value and 
+                            board_copy[to_row, to_col] == current_player.value)
 
                 temp_piece = board_copy[from_row, from_col]
                 board_copy[to_row, to_col] = temp_piece
                 board_copy[from_row, from_col] = Player.NONE.value
 
+                env.current_player = current_player
+                
                 eval, _ = self._minimax(env, board_copy, depth - 1, alpha, beta, True)
+                
+                env.current_player = opponent
 
                 if is_capture:
-                    eval -= 5 
+                    eval -= 5
 
                 if eval < min_eval:
                     min_eval = eval
@@ -124,8 +161,14 @@ class MinimaxSurakartaAgent:
                 if beta <= alpha:
                     break
 
+            env.board = original_board
+            env.current_player = original_player
+            
+            if best_action is None:
+                return self._evaluate_position(board, current_player), None
+                
             return min_eval, best_action
-
+        
     def _get_all_valid_actions(self, env) -> List[Tuple[int, int, int, int]]:
         actions = []
         current_player = env.current_player.value
