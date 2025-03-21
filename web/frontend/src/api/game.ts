@@ -9,8 +9,7 @@ import {
     MultiplayerGameState
 } from "../types";
 
-// @ts-ignore
-const API_URL = process.env.VITE_API_URL || '/api';
+const API_URL = '/api';
 
 const getAuthToken = () => localStorage.getItem('authToken');
 
