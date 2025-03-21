@@ -9,7 +9,7 @@ interface GameProps {
     mode?: 'single' | 'multiplayer';
 }
 
-const Game = ({ onReturnToMenu, mode = 'single' }: GameProps) => {
+const Game = ({ onReturnToMenu }: GameProps) => {
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [gameId, setGameId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
