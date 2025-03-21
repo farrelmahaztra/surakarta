@@ -9,7 +9,8 @@ import {
     MultiplayerGameState
 } from "../types";
 
-const API_URL = 'http://localhost:8000/api';
+// @ts-ignore
+const API_URL = process.env.VITE_API_URL || '/api';
 
 const getAuthToken = () => localStorage.getItem('authToken');
 
@@ -196,7 +197,7 @@ export const userApi = {
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error || 'Failed to update profile');
         }
@@ -240,7 +241,7 @@ export const userApi = {
 
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
-        
+
         return true;
     },
 
