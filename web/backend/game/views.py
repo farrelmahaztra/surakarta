@@ -16,7 +16,7 @@ from .serializers import (
     CreateMatchSerializer
 )
 from uuid import uuid4
-
+from engine.surakarta import Player
 
 class GameViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"])
@@ -398,7 +398,7 @@ class MatchViewSet(viewsets.ViewSet):
             
             if black_player and white_player:
                 is_black = black_player == request.user
-                winner = 1 if is_black else 0 
+                winner = Player.BLACK.value if is_black else Player.WHITE.value
                 
                 try:
                     black_profile = black_player.profile
@@ -407,7 +407,7 @@ class MatchViewSet(viewsets.ViewSet):
                     black_profile.games_played += 1
                     white_profile.games_played += 1
                     
-                    if winner == 0: 
+                    if winner == Player.BLACK.value: 
                         black_profile.wins += 1
                         white_profile.losses += 1
                         print(f"Black ({black_player.username}) won by forfeit against White ({white_player.username})")

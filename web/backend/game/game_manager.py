@@ -426,13 +426,13 @@ class GameManager:
             black_result = None
             white_result = None
             
-            if winner == 0: 
+            if winner == Player.BLACK.value: 
                 black_profile.wins += 1
                 white_profile.losses += 1
                 black_result = 'win'
                 white_result = 'loss'
                 print(f"Black ({black_player.username}) won against White ({white_player.username})")
-            elif winner == 1:
+            elif winner == Player.WHITE.value:
                 black_profile.losses += 1
                 white_result = 'win'
                 black_result = 'loss'
@@ -484,8 +484,8 @@ class GameManager:
                     white_game_record.end_time = timezone.now()
                     white_game_record.save()
 
-            match.game.result = black_result if winner == 0 else white_result
-            match.game.final_score = black_score if winner == 0 else white_score
+            match.game.result = black_result if winner == Player.BLACK.value else white_result
+            match.game.final_score = black_score if winner == Player.BLACK.value else white_score
             
             if black_player.profile.analytics_consent and match.game.user == black_player:
                 match.game.end_time = timezone.now()
