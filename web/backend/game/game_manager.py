@@ -21,7 +21,7 @@ GameState = Dict[str, Union[SurakartaEnv, AgentType, List, User]]
 current_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(
     current_dir,
-    "../../../optimal_runs/minimax_20250326_181130/dqn_episode1300.pt",
+    "../../../surakarta_checkpoints/Curriculum_20250330_054415/dqn_curriculum_stage5_episode4400.pt",
 )
 
 class GameManager:
