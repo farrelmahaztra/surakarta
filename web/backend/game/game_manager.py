@@ -35,7 +35,13 @@ class GameManager:
         if agent_type == "rule":
             agent = MinimaxSurakartaAgent(max_depth=1)
         elif agent_type == "rl":
-            agent = SurakartaRLAgent(env, device="mps")
+            if torch.backends.mps.is_available():
+                device = "mps"
+            elif torch.cuda.is_available():
+                device = "cuda"
+            else:
+                device = "cpu"
+            agent = SurakartaRLAgent(env, device=device)
             checkpoint = torch.load(model_path, map_location=agent.device)
             agent.q_net.load_state_dict(checkpoint["q_net_state_dict"])
             agent.target_net.load_state_dict(checkpoint["q_net_state_dict"])
