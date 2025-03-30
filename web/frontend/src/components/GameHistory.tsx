@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { userApi, matchApi } from '../api/game';
-import { GameRecord, Match } from '../types';
+import { userApi } from '../api/game';
+import { GameRecord } from '../types';
 
 const GameHistory = () => {
-  const [gameHistory, setGameHistory] = useState<GameRecord[] | Match[]>([]);
+  const [gameHistory, setGameHistory] = useState<GameRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -16,18 +16,9 @@ const GameHistory = () => {
         setProfile(profileData);
 
         const historyData = await userApi.getGameHistory();
-        const completedSinglePlayerGames = historyData.filter((game: GameRecord) => game.result !== null);
-
-        const myMatches = await matchApi.getMyMatches();
-        console.log("completedSinglePlayerGames:", completedSinglePlayerGames);
-
-        const completedMatches = myMatches.filter((match: Match) =>
-          match.status === 'completed'
-        );
-        console.log("Completed matches:", completedMatches);
-
-        const gameHistory = [...completedSinglePlayerGames, ...completedMatches].sort((a, b) =>
-          new Date(b.start_time || b.created_at).getTime() - new Date(a.start_time || a.created_at).getTime()
+        const gameHistoryRaw = historyData.filter((game: GameRecord) => game.result !== null);
+        const gameHistory = gameHistoryRaw.sort((a: GameRecord, b: GameRecord) =>
+          new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
         );
 
         setGameHistory(gameHistory);
@@ -90,20 +81,15 @@ const GameHistory = () => {
             </thead>
             <tbody className="text-black text-sm">
               {gameHistory
-                // @ts-ignore
-                .filter((game: GameRecord | Match) => game.status === "completed" || game.result !== null)
+                .filter((game: GameRecord) => game.result !== null)
                 .map((game) => (
                   <tr key={game.id} className="border-b border-gray-200 hover:bg-gray-100">
                     <td className="py-3 px-4">
-                      {/* @ts-ignore */}
-                      {new Date(game.created_at ?? game.start_time).toLocaleDateString()}
+                      {new Date(game.start_time).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4 capitalize">
-                      {/* @ts-ignore */}
-                      {game.opponent_username
-                        // @ts-ignore
-                        ? `${game.opponent_username || 'Unknown'} (Multiplayer)`
-                        // @ts-ignore
+                      {game.opponent_type === 'multiplayer'
+                        ? `${game.opponent_name || 'Unknown'} (Multiplayer)`
                         : `${game.opponent_type} Agent`}
                     </td>
                     <td className="py-3 px-4">

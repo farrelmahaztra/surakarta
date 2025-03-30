@@ -114,11 +114,10 @@ class GameManager:
         if winner is not None:
             player_won = (player_is_black and winner == Player.BLACK.value) or \
                          (not player_is_black and winner == Player.WHITE.value)
+        if info and ((player_is_black and info.get('white_pieces', 0) == 0) or 
+                    (not player_is_black and info.get('black_pieces', 0) == 0)):
+            player_won = True
                 
-        print(f"Game over: {terminated or truncated}, Player won: {player_won}, " +
-              f"winner: {winner}, current player: {env.current_player.value}, " +
-              f"player color: {player_color}")
-              
         if terminated or truncated:
             user = game.get("user")
             if user:
@@ -432,14 +431,20 @@ class GameManager:
             black_result = None
             white_result = None
             
-            if winner == Player.BLACK.value: 
+            black_score = 12 - info.get('white_pieces', 0) if info else 0
+            white_score = 12 - info.get('black_pieces', 0) if info else 0
+            black_captured_all = info and info.get('white_pieces', -1) == 0
+            white_captured_all = info and info.get('black_pieces', -1) == 0
+            
+            if winner == Player.BLACK.value or black_captured_all: 
                 black_profile.wins += 1
                 white_profile.losses += 1
                 black_result = 'win'
                 white_result = 'loss'
                 print(f"Black ({black_player.username}) won against White ({white_player.username})")
-            elif winner == Player.WHITE.value:
+            elif winner == Player.WHITE.value or white_captured_all:
                 black_profile.losses += 1
+                white_profile.wins += 1
                 white_result = 'win'
                 black_result = 'loss'
                 print(f"White ({white_player.username}) won against Black ({black_player.username})")
@@ -449,9 +454,6 @@ class GameManager:
                 black_result = 'draw'
                 white_result = 'draw'
                 print(f"Draw between Black ({black_player.username}) and White ({white_player.username})")
-            
-            black_score = 12 - info.get('white_pieces', 0) if info else 0
-            white_score = 12 - info.get('black_pieces', 0) if info else 0
             
             black_profile.save()
             white_profile.save()
@@ -490,8 +492,15 @@ class GameManager:
                     white_game_record.end_time = timezone.now()
                     white_game_record.save()
 
-            match.game.result = black_result if winner == Player.BLACK.value else white_result
-            match.game.final_score = black_score if winner == Player.BLACK.value else white_score
+            if black_result == 'win':
+                match.game.result = black_result
+                match.game.final_score = black_score
+            elif white_result == 'win':
+                match.game.result = white_result
+                match.game.final_score = white_score
+            else:
+                match.game.result = 'draw'
+                match.game.final_score = 0
             
             if black_player.profile.analytics_consent and match.game.user == black_player:
                 match.game.end_time = timezone.now()
