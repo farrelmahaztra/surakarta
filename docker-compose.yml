@@ -48,6 +48,9 @@ services:
       - static_volume:/var/www/staticfiles
       - media_volume:/var/www/media
       - frontend_build:/var/www/frontend
+      - /etc/letsencrypt/live/surakartagame.com:/etc/nginx/certs
+      - /etc/letsencrypt/archive/surakartagame.com:/etc/nginx/archive
+      - /etc/letsencrypt/options-ssl-nginx.conf:/etc/nginx/options-ssl-nginx.conf
     ports:
       - "80:80"
       - "443:443"
