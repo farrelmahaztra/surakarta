@@ -49,6 +49,8 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     f"http://{host}" for host in ALLOWED_HOSTS
+] + [
+    f"https://{host}" for host in ALLOWED_HOSTS
 ]
 
 ROOT_URLCONF = "surakarta.urls"
